@@ -289,9 +289,9 @@
     </style>
 </head>
 <body class="no-select">
-    <audio id="onYourMarksSound" src="on-your-marks.mp3" preload="auto"></audio>
-    <audio id="getSetReadySound" src="get-set-ready.mp3" preload="auto"></audio>
-    <audio id="goSound" src="go.mp3" preload="auto"></audio>
+    <audio id="onYourMarksSound" src="on-your-marks.mp3" preload="auto" playsinline></audio>
+    <audio id="getSetReadySound" src="get-set-ready.mp3" preload="auto" playsinline></audio>
+    <audio id="goSound" src="go.mp3" preload="auto" playsinline></audio>
 
     <div class="container" id="container">
         <div class="glass-card">
@@ -326,12 +326,45 @@
             return Math.floor(Math.random() * 17000) + 3000;
         }
 
+        // Unlock audio for iOS Safari (must be called during user interaction)
+        function unlockAudio() {
+            const audioElements = [onYourMarksSound, getSetReadySound, goSound];
+            audioElements.forEach((audio, index) => {
+                if (audio) {
+                    // Set volume to ensure it's ready
+                    audio.volume = 1.0;
+                    // Play and immediately pause to unlock audio on iOS
+                    // Small delay between each to avoid conflicts
+                    setTimeout(() => {
+                        const playPromise = audio.play();
+                        if (playPromise !== undefined) {
+                            playPromise
+                                .then(() => {
+                                    audio.pause();
+                                    audio.currentTime = 0;
+                                })
+                                .catch(() => {
+                                    // Ignore errors during unlock
+                                });
+                        }
+                    }, index * 50);
+                }
+            });
+        }
+
         function playSound(audioElement, retries = 3) {
             if (!audioElement) return;
             
+            // Ensure volume is set
+            audioElement.volume = 1.0;
             audioElement.currentTime = 0;
             
             const attemptPlay = (attempt = 0) => {
+                // For iOS, sometimes we need to load first
+                if (audioElement.readyState < 2) {
+                    audioElement.load();
+                }
+                
                 const playPromise = audioElement.play();
                 
                 if (playPromise !== undefined) {
@@ -378,6 +411,9 @@
 
         function startRaceSequence() {
             if (isActive) return;
+            
+            // Unlock all audio elements for iOS Safari (must be during user interaction)
+            unlockAudio();
             
             isActive = true;
             
