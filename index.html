@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Race Start Trainer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #0f0f1e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated background stars effect */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(2px 2px at 60% 70%, rgba(255,255,255,0.2), transparent),
+                radial-gradient(1px 1px at 50% 50%, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.3), transparent);
+            background-size: 200% 200%;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            z-index: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            text-align: center;
+            transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scaleX(1) scaleY(1);
+        }
+
+        .glass-card.sequence-active {
+            padding: 50px 40px;
+            transform: scaleX(1.03) scaleY(1.15);
+        }
+
+        h1 {
+            color: #ffffff;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            letter-spacing: -0.5px;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+            margin-bottom: 40px;
+            font-weight: 400;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card.sequence-active h1,
+        .glass-card.sequence-active .subtitle {
+            transform: translateY(-40px);
+        }
+
+        .button-container {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .main-button {
+            width: 100%;
+            max-width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0 auto;
+        }
+
+        .main-button.moved-up {
+            transform: translateY(-40px);
+        }
+
+        .main-button:active:not(.moved-up) {
+            transform: scale(0.98);
+        }
+
+        .main-button:active.moved-up {
+            transform: translateY(-40px) scale(0.98);
+        }
+
+        .main-button.idle {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+        }
+
+        .main-button.idle:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .main-button.countdown {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+            border-color: rgba(255, 140, 0, 0.5);
+            color: #ffffff;
+            cursor: not-allowed;
+            animation: pulse-amber 1.5s ease-in-out infinite;
+            box-shadow: 0 0 40px rgba(255, 140, 0, 0.4),
+                        0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        @keyframes pulse-amber {
+            0%, 100% {
+                box-shadow: 0 0 40px rgba(255, 140, 0, 0.4),
+                            0 8px 24px rgba(0, 0, 0, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 60px rgba(255, 140, 0, 0.6),
+                            0 8px 24px rgba(0, 0, 0, 0.4);
+            }
+        }
+
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: flash-green 0.3s ease;
+        }
+
+        .start-screen.active {
+            display: flex;
+        }
+
+        @keyframes flash-green {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .go-text {
+            font-size: 72px;
+            font-weight: 900;
+            color: #0a0e27;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            letter-spacing: 8px;
+            animation: zoom-in 0.3s ease;
+        }
+
+        @keyframes zoom-in {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Prevent text selection on mobile */
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .cancel-button {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .cancel-button.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .cancel-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .cancel-button:active {
+            transform: scale(0.98);
+        }
+
+        /* iPhone safe area support */
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(20px, env(safe-area-inset-left));
+                padding-right: max(20px, env(safe-area-inset-right));
+                padding-top: max(20px, env(safe-area-inset-top));
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+            }
+        }
+    </style>
+</head>
+<body class="no-select">
+    <audio id="onYourMarksSound" src="on-your-marks.mp3" preload="auto"></audio>
+    <audio id="getSetReadySound" src="get-set-ready.mp3" preload="auto"></audio>
+    <audio id="goSound" src="go.mp3" preload="auto"></audio>
+
+    <div class="container" id="container">
+        <div class="glass-card">
+            <h1>Race Start Trainer</h1>
+            <div class="subtitle">600m Reaction Practice</div>
+            <div class="button-container">
+                <button class="main-button idle" id="mainButton">Start Race Sequence</button>
+                <button class="cancel-button" id="cancelButton">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="start-screen" id="startScreen">
+        <div class="go-text">GO!</div>
+    </div>
+
+    <script>
+        const mainButton = document.getElementById('mainButton');
+        const cancelButton = document.getElementById('cancelButton');
+        const container = document.getElementById('container');
+        const glassCard = container.querySelector('.glass-card');
+        const startScreen = document.getElementById('startScreen');
+        const onYourMarksSound = document.getElementById('onYourMarksSound');
+        const getSetReadySound = document.getElementById('getSetReadySound');
+        const goSound = document.getElementById('goSound');
+
+        let isActive = false;
+        let timeoutIds = [];
+
+        function getRandomDelay() {
+            // Random delay between 5-15 seconds (5000-15000ms)
+            return Math.floor(Math.random() * 10000) + 5000;
+        }
+
+        function playSound(audioElement) {
+            audioElement.currentTime = 0;
+            audioElement.play().catch(err => {
+                console.log('Sound play error:', err);
+            });
+        }
+
+        function resetToIdle() {
+            // Clear all timeouts
+            timeoutIds.forEach(id => clearTimeout(id));
+            timeoutIds = [];
+            
+            // Reset UI
+            startScreen.classList.remove('active');
+            container.classList.remove('hidden');
+            glassCard.classList.remove('sequence-active');
+            mainButton.classList.remove('countdown', 'moved-up');
+            mainButton.classList.add('idle');
+            mainButton.textContent = 'Start Race Sequence';
+            mainButton.disabled = false;
+            cancelButton.classList.remove('visible');
+            isActive = false;
+        }
+
+        function cancelSequence() {
+            if (!isActive) return;
+            resetToIdle();
+        }
+
+        function startRaceSequence() {
+            if (isActive) return;
+            
+            isActive = true;
+            
+            // Add sequence-active class to move title and subtitle up
+            glassCard.classList.add('sequence-active');
+            
+            // Change button to countdown state and move it up
+            mainButton.classList.remove('idle');
+            mainButton.classList.add('countdown', 'moved-up');
+            mainButton.textContent = 'Get Ready…';
+            mainButton.disabled = true;
+
+            // Show cancel button with fade-in animation
+            cancelButton.classList.add('visible');
+
+            // Calculate random delay (5-15 seconds)
+            const delay = getRandomDelay();
+
+            // Generate two random times during the delay (but not at the end)
+            // Reserve last 500ms to ensure "go" plays cleanly
+            const maxTime = delay - 500;
+            
+            // "On your marks" plays first, randomly in the first 2/3 of the delay
+            const maxTime1 = Math.floor(maxTime * 0.67);
+            const time1 = Math.floor(Math.random() * maxTime1);
+            
+            // "Get set ready" plays after "on your marks", at least 1 second later
+            // but still within the delay period
+            const minTime2 = time1 + 1000;
+            const time2 = minTime2 + Math.floor(Math.random() * (maxTime - minTime2));
+
+            // Play "On your marks" at the first random time
+            const timeout1 = setTimeout(() => {
+                playSound(onYourMarksSound);
+            }, time1);
+            timeoutIds.push(timeout1);
+
+            // Play "Get set ready" at the second random time (always after "on your marks")
+            const timeout2 = setTimeout(() => {
+                playSound(getSetReadySound);
+            }, time2);
+            timeoutIds.push(timeout2);
+
+            // After full random delay, play "Go" sound and show green screen
+            const timeout3 = setTimeout(() => {
+                // Play go sound
+                playSound(goSound);
+
+                // Hide container and show green start screen
+                container.classList.add('hidden');
+                startScreen.classList.add('active');
+
+                // After 2 seconds, reset to idle state
+                const timeout4 = setTimeout(() => {
+                    resetToIdle();
+                }, 2000);
+                timeoutIds.push(timeout4);
+            }, delay);
+            timeoutIds.push(timeout3);
+        }
+
+        // Event listeners
+        mainButton.addEventListener('click', startRaceSequence);
+        mainButton.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            startRaceSequence();
+        }, { passive: false });
+
+        cancelButton.addEventListener('click', cancelSequence);
+        cancelButton.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            cancelSequence();
+        }, { passive: false });
+
+        // Prevent double-tap zoom on iOS
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
+
