@@ -322,15 +322,36 @@
         let timeoutIds = [];
 
         function getRandomDelay() {
-            // Random delay between 5-15 seconds (5000-15000ms)
-            return Math.floor(Math.random() * 10000) + 5000;
+            // Random delay between 3-20 seconds (3000-20000ms)
+            return Math.floor(Math.random() * 17000) + 3000;
         }
 
-        function playSound(audioElement) {
+        function playSound(audioElement, retries = 3) {
+            if (!audioElement) return;
+            
             audioElement.currentTime = 0;
-            audioElement.play().catch(err => {
-                console.log('Sound play error:', err);
-            });
+            
+            const attemptPlay = (attempt = 0) => {
+                const playPromise = audioElement.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            // Audio played successfully
+                        })
+                        .catch(err => {
+                            console.log('Sound play error:', err);
+                            // Retry if we have attempts left
+                            if (attempt < retries) {
+                                setTimeout(() => {
+                                    attemptPlay(attempt + 1);
+                                }, 100);
+                            }
+                        });
+                }
+            };
+            
+            attemptPlay();
         }
 
         function resetToIdle() {
@@ -372,7 +393,7 @@
             // Show cancel button with fade-in animation
             cancelButton.classList.add('visible');
 
-            // Calculate random delay (5-15 seconds)
+            // Calculate random delay (3-20 seconds)
             const delay = getRandomDelay();
 
             // Generate two random times during the delay (but not at the end)
@@ -402,8 +423,12 @@
 
             // After full random delay, play "Go" sound and show green screen
             const timeout3 = setTimeout(() => {
-                // Play go sound
-                playSound(goSound);
+                // Reload and play go sound to ensure it plays reliably
+                goSound.load();
+                // Small delay to ensure audio is ready, then play
+                setTimeout(() => {
+                    playSound(goSound);
+                }, 50);
 
                 // Hide container and show green start screen
                 container.classList.add('hidden');
@@ -416,6 +441,25 @@
                 timeoutIds.push(timeout4);
             }, delay);
             timeoutIds.push(timeout3);
+        }
+
+        // Preload and ensure audio files are ready
+        function initializeAudio() {
+            const audioElements = [onYourMarksSound, getSetReadySound, goSound];
+            audioElements.forEach(audio => {
+                if (audio) {
+                    audio.load();
+                    // Ensure audio can play
+                    audio.volume = 1.0;
+                }
+            });
+        }
+
+        // Initialize audio when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeAudio);
+        } else {
+            initializeAudio();
         }
 
         // Event listeners
